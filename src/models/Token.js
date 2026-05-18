@@ -1,0 +1,17 @@
+import mongoose from 'mongoose';
+
+const TokenSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  age: { type: Number, required: true },
+  gender: { type: String, required: true },
+  mobile: { type: String, required: true },
+  symptoms: { type: String, required: true },
+  assigned_department: { type: String, required: true },
+  token_number: { type: Number, required: true },
+  unique_token_id: { type: String, required: true, unique: true },
+  status: { type: String, default: 'Pending' }, // Pending, Checked_In, Completed
+  date: { type: String, required: true } // format: YYYY-MM-DD (Daily reset logic ke liye)
+}, { timestamps: true });
+
+// Next.js ke serverless behavior ki wajah se hume check karna padta hai ki model pehle se bana hai ya nahi
+export default mongoose.models.Token || mongoose.model('Token', TokenSchema);

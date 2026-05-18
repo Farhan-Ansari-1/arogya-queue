@@ -1,0 +1,119 @@
+"use client";
+
+import React, { useRef } from "react";
+import { Printer } from "lucide-react";
+
+export default function PrintableSlip({ result, name, age, gender, mobile }) {
+  const slipRef = useRef();
+
+  if (!result) return null;
+
+  const handlePrint = () => {
+    const printContent = slipRef.current.innerHTML;
+    const originalContent = document.body.innerHTML;
+
+    document.body.innerHTML = printContent;
+    window.print();
+
+    document.body.innerHTML = originalContent;
+    window.location.reload();
+  };
+
+  return (
+    <div className="w-full space-y-4">
+      {/* 📄 REAL HOSPITAL BLUEPRINT LAYOUT */}
+      <div
+        ref={slipRef}
+        className="bg-white text-black p-6 rounded-xl border border-slate-200 shadow-sm max-w-sm mx-auto text-left font-mono"
+        id="hospital-token-slip"
+      >
+        {/* Hospital Header */}
+        <div className="text-center border-b-2 border-dashed border-black pb-3 mb-3 space-y-0.5">
+          <h2 className="text-md font-black tracking-wide uppercase">
+            I.G.M. HOSPITAL, BHIWANDI
+          </h2>{" "}
+          <p className="text-[10px] text-gray-600 uppercase font-sans font-bold">
+            OPD Smart Queue System
+          </p>
+          <p className="text-[9px] text-gray-500 font-sans">
+            Date: {new Date().toLocaleDateString("en-IN")} | Time:{" "}
+            {new Date().toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+
+        {/* Big Bold Token Code */}
+        <div className="text-center my-3 py-2 border-2 border-black rounded-lg bg-gray-50">
+          <p className="text-[10px] text-gray-600 uppercase tracking-wider font-sans font-bold">
+            TOKEN NUMBER / टोकन संख्या
+          </p>
+          <h1 className="text-4xl font-black tracking-widest text-black mt-1">
+            {result.unique_token_id || "AQ-MED-00"}
+          </h1>
+        </div>
+
+        {/* Patient Vital Info */}
+        <div className="space-y-1 text-xs border-b-2 border-dashed border-black pb-3 mb-3">
+          <p>
+            <span className="font-bold">PATIENT NAME :</span>{" "}
+            <span className="uppercase">{name || "ANONYMOUS"}</span>
+          </p>
+          <p>
+            <span className="font-bold">AGE / SEX :</span> {age || "00"} Y /{" "}
+            {gender || "M"}
+          </p>
+          <p>
+            <span className="font-bold">MOBILE NO :</span> +91{" "}
+            {mobile || "0000000000"}
+          </p>
+        </div>
+
+        {/* DYNAMIC DOCTOR & ROOM ASSIGNMENT */}
+        <div className="space-y-2 text-xs border-b-2 border-dashed border-black pb-3 mb-3">
+          <p>
+            <span className="font-bold">ASSIGNED DEPT:</span>{" "}
+            <span className="uppercase text-sm font-black">
+              {result.assigned_department}
+            </span>
+          </p>
+          <p>
+            <span className="font-bold">CONSULTANT :</span>{" "}
+            <span className="uppercase font-bold text-gray-800">
+              {result.doctor_name || "ON DUTY DOCTOR"}
+            </span>
+          </p>
+          <p>
+            <span className="font-bold">ROOM NUMBER :</span>{" "}
+            <span className="uppercase font-black text-sm bg-gray-100 px-1 border border-black/10">
+              {result.room_number || "CHECK COUNTER"}
+            </span>
+          </p>
+        </div>
+
+        {/* Footer Guidance */}
+        <div className="text-center mt-3">
+          <p className="text-[9px] text-gray-600 leading-tight font-sans">
+            Please sit outside the assigned room number. Your Token ID will be
+            flashed on the doctor&apos;s cabin indicator screen.
+          </p>
+          <p className="text-[9px] font-bold mt-1 font-sans text-gray-800">
+            कृपया आवंटित कमरा नंबर के बाहर बैठें। आपकी बारी आने पर सूचित किया
+            जाएगा।
+          </p>
+        </div>
+      </div>
+
+      {/* CONTROLS */}
+      <div className="flex gap-3 justify-center max-w-sm mx-auto">
+        <button
+          onClick={handlePrint}
+          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md"
+        >
+          <Printer size={14} /> Print / Save Slip
+        </button>
+      </div>
+    </div>
+  );
+}
