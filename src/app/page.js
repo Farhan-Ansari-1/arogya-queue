@@ -1,150 +1,294 @@
 "use client";
 
-import { useState } from 'react';
-import { ArrowRight, Activity, AlertTriangle } from 'lucide-react';
-import PrintableSlip from '@/components/PrintableSlip';
+import { useState } from "react";
+import {
+  Hospital,
+  Phone,
+  MapPin,
+  Clock,
+  User,
+  Calendar,
+  Users,
+  Smartphone,
+  MessageSquare,
+  Loader2,
+} from "lucide-react";
+import PrintableSlip from "@/components/PrintableSlip";
 
-export default function Home() {
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('Male');
-  const [mobile, setMobile] = useState('');
-  const [symptoms, setSymptoms] = useState('');
+export default function PatientPortal() {
+  const [formData, setFormData] = useState({
+    name: "",
+    age: "",
+    gender: "Male",
+    mobile: "",
+    symptoms: "",
+  });
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null); // To store the token generation result
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setResult(null);
+    setError("");
+    setResult(null); // Clear previous result
 
     try {
-      const response = await fetch('/api/triage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symptoms, name, age, gender, mobile })
+      const res = await fetch("/api/triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = await res.json();
+
       if (data.success) {
         setResult(data);
+        // Optionally clear form after successful submission
+        setFormData({
+          name: "",
+          age: "",
+          gender: "Male",
+          mobile: "",
+          symptoms: "",
+        });
       } else {
-        alert(data.error || "Something went wrong!");
+        setError(data.error || "Token generation failed.");
       }
-    } catch (error) {
-      console.error("Frontend Fetch Error:", error);
-      alert("Failed to connect to server.");
+    } catch (err) {
+      console.error("Token Request Error:", err);
+      setError("Server se judne mein dikkat. Kripya dobara prayas karein.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-between p-4">
       {/* Header */}
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-2 text-emerald-400 text-3xl font-bold mb-2">
-          <Activity className="animate-pulse" size={36} />
-          <h1>ArogyaQueue</h1>
+      <header className="w-full max-w-md text-center py-6">
+        <div className="inline-flex p-3 bg-blue-100 rounded-2xl mb-2">
+          <Hospital className="text-blue-600" size={32} />
         </div>
-        <p className="text-slate-400 text-sm">I.G.M. Hospital, Bhiwandi — Online OPD Token Desk</p>
-      </div>
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
+          Indira Gandhi Memorial Hospital
+        </h1>
+        <p className="text-lg md:text-xl font-bold text-slate-700 mt-1">
+          इंदिरा गांधी मेमोरियल हॉस्पिटल
+        </p>
+        <p className="text-xs text-slate-500 mt-2">
+          Bhiwandi Trusted Care Center / भिवंडी का विश्वसनीय देखभाल केंद्र
+        </p>
+      </header>
 
-      <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-        {!result ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-200 border-b border-slate-700 pb-2">Patient Details</h2>
-            
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Full Name</label>
-              <input 
-                type="text" required value={name} onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 uppercase"
-                placeholder="Enter full name"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Age</label>
-                <input 
-                  type="number" required value={age} onChange={(e) => setAge(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
-                  placeholder="Age"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Gender</label>
-                <select 
-                  value={gender} onChange={(e) => setGender(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Mobile Number</label>
-              <input 
-                type="tel" required pattern="[0-9]{10}" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
-                placeholder="Enter 10-digit phone number"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Describe Symptoms</label>
-              <textarea 
-                required rows="3" value={symptoms} onChange={(e) => setSymptoms(e.target.value)}
-                maxLength={250}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
-                placeholder="What is the medical issue?"
-              />
-            </div>
-
-            <button 
-              type="submit" disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded-lg transition-all flex items-center justify-center gap-2 text-sm disabled:bg-slate-700"
-            >
-              {loading ? "AI Processing..." : <>Generate Token ID <ArrowRight size={16} /></>}
-            </button>
-          </form>
+      {/* Main Content - Form or Slip */}
+      <main className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-lg mb-8">
+        {result ? (
+          <PrintableSlip
+            result={result}
+            name={formData.name}
+            age={formData.age}
+            gender={formData.gender}
+            mobile={formData.mobile}
+          />
         ) : (
-          <div className="space-y-6 text-center">
-            {result.is_emergency ? (
-              <div className="bg-red-950/50 border border-red-500 rounded-xl p-5 text-left space-y-3">
-                <div className="flex items-center gap-2 text-red-400 font-bold text-lg">
-                  <AlertTriangle size={24} />
-                  <span>EMERGENCY ALERT</span>
-                </div>
-                <p className="text-sm text-red-200 leading-relaxed">{result.message}</p>
-                <div className="text-2xl font-black text-center text-red-400 bg-red-900/40 py-2 rounded-lg tracking-wider border border-red-500/30">
-                  {result.unique_token_id}
-                </div>
+          <>
+            <h2 className="text-xl font-semibold text-slate-800 mb-6 text-center">
+              Digital Token / डिजिटल टोकन
+            </h2>
+
+            {error && (
+              <div className="mb-4 p-3 rounded-lg text-sm font-medium text-center bg-red-100 border border-red-300 text-red-700">
+                {error}
               </div>
-            ) : (
-              /* LIVE REUSABLE COMPONENT IMPORT */
-              <PrintableSlip 
-                result={result} 
-                name={name} 
-                age={age} 
-                gender={gender} 
-                mobile={mobile} 
-              />
             )}
 
-            <button 
-              onClick={() => { setResult(null); setSymptoms(''); }}
-              className="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2 rounded-lg text-sm transition-all"
-            >
-              Book Another Token
-            </button>
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name */}
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-xs font-medium text-slate-600 mb-1"
+                >
+                  Full Name / पूरा नाम
+                </label>
+                <div className="relative">
+                  <User
+                    className="absolute left-3 top-2.5 text-slate-400"
+                    size={16}
+                  />
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Patient's Full Name / मरीज का पूरा नाम"
+                    required
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Age & Gender */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="age"
+                    className="block text-xs font-medium text-slate-600 mb-1"
+                  >
+                    Age / आयु
+                  </label>
+                  <div className="relative">
+                    <Calendar
+                      className="absolute left-3 top-2.5 text-slate-400"
+                      size={16}
+                    />
+                    <input
+                      type="number"
+                      id="age"
+                      name="age"
+                      value={formData.age}
+                      onChange={handleChange}
+                      placeholder="Age / उम्र"
+                      required
+                      min="0"
+                      max="120"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label
+                    htmlFor="gender"
+                    className="block text-xs font-medium text-slate-600 mb-1"
+                  >
+                    Gender / लिंग
+                  </label>
+                  <div className="relative">
+                    <Users
+                      className="absolute left-3 top-2.5 text-slate-400"
+                      size={16}
+                    />
+                    <select
+                      id="gender"
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleChange}
+                      required
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none"
+                    >
+                      <option value="Male">Male / पुरुष</option>
+                      <option value="Female">Female / महिला</option>
+                      <option value="Other">Other / अन्य</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                      <svg
+                        className="fill-current h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile */}
+              <div>
+                <label
+                  htmlFor="mobile"
+                  className="block text-xs font-medium text-slate-600 mb-1"
+                >
+                  Mobile Number / मोबाइल नंबर
+                </label>
+                <div className="relative">
+                  <Smartphone
+                    className="absolute left-3 top-2.5 text-slate-400"
+                    size={16}
+                  />
+                  <input
+                    type="tel"
+                    id="mobile"
+                    name="mobile"
+                    value={formData.mobile}
+                    onChange={handleChange}
+                    placeholder="10-digit Mobile No. / 10 अंकों का मोबाइल नंबर"
+                    required
+                    pattern="[0-9]{10}"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Symptoms */}
+              <div>
+                <label
+                  htmlFor="symptoms"
+                  className="block text-xs font-medium text-slate-600 mb-1"
+                >
+                  Symptoms / लक्षण
+                </label>
+                <div className="relative">
+                  <MessageSquare
+                    className="absolute left-3 top-2.5 text-slate-400"
+                    size={16}
+                  />
+                  <textarea
+                    id="symptoms"
+                    name="symptoms"
+                    value={formData.symptoms}
+                    onChange={handleChange}
+                    placeholder="Ex: Fever, cough, headache / जैसे: बुखार, खांसी, सिरदर्द"
+                    rows="3"
+                    required
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all resize-none"
+                  ></textarea>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2 mt-6 shadow-md"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} /> Generating
+                    Token...
+                  </>
+                ) : (
+                  <>Generate Token / टोकन निकालें</>
+                )}
+              </button>
+            </form>
+          </>
         )}
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full max-w-md text-center text-slate-600 text-xs mt-auto py-4 border-t border-slate-200">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <MapPin size={14} />
+          <p>Maruti Mandir Rd, Kacheri Pada, Bhiwandi, Maharashtra 421302</p>
+        </div>
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <Phone size={14} />
+          <a href="tel:02522226282" className="hover:underline">
+            02522 226 282
+          </a>
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          <Clock size={14} />
+          <p>Open 24 hours / 24 घंटे खुला है</p>
+        </div>
+      </footer>
     </div>
   );
 }

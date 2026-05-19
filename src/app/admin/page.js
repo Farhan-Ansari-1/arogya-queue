@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit3, Save, Trash2, ToggleLeft, ToggleRight, Building2, UserPlus, Users, RefreshCw, LogOut } from 'lucide-react';
+import { Plus, Edit3, Save, Trash2, ToggleLeft, ToggleRight, Building2, UserPlus, Users, RefreshCw, LogOut, KeyRound } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [authorized, setAuthorized] = useState(false);
@@ -95,14 +95,20 @@ export default function AdminDashboard() {
   const handleDeleteDepartment = async (id) => {
     if (!confirm("Are you sure you want to delete this department?")) return;
     try {
-      await fetch('/api/admin', {
+      const res = await fetch('/api/admin', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type: 'DEPARTMENT' })
       });
-      fetchAdminData();
+      const data = await res.json();
+      if (data.success) {
+        fetchAdminData();
+      } else {
+        alert(data.error || "Delete failed");
+      }
     } catch (error) {
       console.error(error);
+      alert("Connection error while deleting.");
     }
   };
 
@@ -146,14 +152,20 @@ export default function AdminDashboard() {
   const handleDeleteStaff = async (id) => {
     if (!confirm("Remove this staff member permanently?")) return;
     try {
-      await fetch('/api/admin', {
+      const res = await fetch('/api/admin', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type: 'STAFF' })
       });
-      fetchAdminData();
+      const data = await res.json();
+      if (data.success) {
+        fetchAdminData();
+      } else {
+        alert(data.error || "Failed to remove staff");
+      }
     } catch (error) {
       console.error(error);
+      alert("Connection error while removing staff.");
     }
   };
 
@@ -179,6 +191,32 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error(error);
       alert("Failed to save changes.");
+    }
+  };
+
+  const handleResetPassword = async (id) => {
+    const newPassword = window.prompt("Enter New Password / नया पासवर्ड डालें (min 4 chars):");
+    
+    if (!newPassword || newPassword.length < 4) {
+      if (newPassword) alert("Password too short! / पासवर्ड बहुत छोटा है।");
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password: newPassword })
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("Password updated successfully! / पासवर्ड बदल दिया गया है।");
+        fetchAdminData();
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      alert("Reset Failed.");
     }
   };
 
@@ -383,7 +421,7 @@ export default function AdminDashboard() {
                 <div key={staff._id} className="bg-slate-900/40 border border-slate-700/40 rounded-xl p-3 flex items-center justify-between text-xs font-mono">
                   <div>
                     <p className="text-slate-200 font-bold font-sans text-sm">{staff.name}</p>
-                    <p className="text-slate-400 mt-0.5">Username: <strong className="text-blue-400">{staff.username}</strong> | Password: <span className="text-slate-500">********</span></p>
+                    <p className="text-slate-400 mt-0.5">Username: <strong className="text-blue-400">{staff.username}</strong> | Password: <span className="text-slate-600">••••••••</span></p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-sans font-semibold border ${staff.role === 'Doctor' ? 'bg-blue-950 text-blue-400 border-blue-800' : 'bg-purple-950 text-purple-400 border-purple-800'}`}>
@@ -404,6 +442,13 @@ export default function AdminDashboard() {
                         setEditRoom(staff.roomNumber);
                       }} className="text-slate-400 hover:text-slate-200 p-1"><Edit3 size={14} /></button>
                     )}
+                    <button 
+                      onClick={() => handleResetPassword(staff._id)}
+                      title="Reset Password"
+                      className="text-amber-500 hover:text-amber-400 p-1"
+                    >
+                      <KeyRound size={14} />
+                    </button>
                     <button onClick={() => handleDeleteStaff(staff._id)} className="text-slate-500 hover:text-red-400"><Trash2 size={14} /></button>
                   </div>
                 </div>

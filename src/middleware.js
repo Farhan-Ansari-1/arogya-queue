@@ -15,7 +15,8 @@ export async function middleware(request) {
 
   try {
     if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not defined in environment variables.");
+      console.error("❌ MIDDLEWARE ERROR: JWT_SECRET is missing in .env.local");
+      return NextResponse.redirect(new URL('/login?error=config', request.url));
     }
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
@@ -32,8 +33,8 @@ export async function middleware(request) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // Reception logic: Receptionist and Admin can access /reception
-    if (pathname.startsWith('/reception') && !['Receptionist', 'Admin'].includes(payload.role)) {
+    // Reception logic: Receptionist and Admin can access /reception and /api/reception
+    if ((pathname.startsWith('/reception') || pathname.startsWith('/api/reception')) && !['Receptionist', 'Admin'].includes(payload.role)) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
@@ -54,5 +55,6 @@ export const config = {
     '/reception/:path*',
     '/api/admin/:path*',
     '/api/doctor/:path*',
+    '/api/reception/:path*',
   ],
 };

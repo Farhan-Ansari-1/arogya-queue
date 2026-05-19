@@ -9,10 +9,11 @@ export async function GET(req) {
 
         // Aaj ki date nikalna
         const todayStr = new Date().toISOString().split('T')[0];
+        const todayDateObj = new Date(todayStr);
 
         // Database se aaj ke sirf 'Pending' aur 'Checked_In' patients nikalna order wise
         const activeTokens = await Token.find({
-            date: todayStr,
+            date: todayDateObj,
             status: { $in: ['Pending', 'Checked_In'] }
         }).sort({ token_number: 1 }); // 1, 2, 3 ke serial order mein sorting
 

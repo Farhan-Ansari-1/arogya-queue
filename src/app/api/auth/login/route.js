@@ -17,6 +17,7 @@ export async function POST(req) {
         const user = await Staff.findOne({ username: username.toLowerCase().trim() });
 
         if (!user) {
+            console.log(`❌ Login Fail: Username '${username}' not found in DB.`);
             return NextResponse.json({ success: false, error: "Galat username ya password." }, { status: 401 });
         }
 
@@ -24,6 +25,7 @@ export async function POST(req) {
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
+            console.log(`❌ Login Fail: Password mismatch for user '${username}'.`);
             return NextResponse.json({ success: false, error: "Galat username ya password." }, { status: 401 });
         }
 
@@ -38,7 +40,12 @@ export async function POST(req) {
         };
 
         // 4. Create JWT Token (jose is Edge-compatible for middleware)
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'arogya_secret_key_123');
+        if (!process.env.JWT_SECRET) {
+            console.error("❌ CRITICAL ERROR: JWT_SECRET is missing in .env.local");
+            return NextResponse.json({ success: false, error: "Server Configuration Error: Missing Secret Key" }, { status: 500 });
+        }
+
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
         const token = await new SignJWT({ ...userWithoutPassword })
             .setProtectedHeader({ alg: 'HS256' })
             .setExpirationTime('24h')

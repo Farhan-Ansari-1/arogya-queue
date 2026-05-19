@@ -9,13 +9,14 @@ export async function GET(req) {
     try {
         await connectDB();
         const todayStr = new Date().toISOString().split('T')[0];
+        const todayDateObj = new Date(todayStr);
 
         const doctors = await Staff.find({ role: 'Doctor' }).sort({ createdAt: -1 }); // No change needed here for date string
-        const totalTokensToday = await Token.countDocuments({ date: todayStr });
+        const totalTokensToday = await Token.countDocuments({ date: todayDateObj });
         const departments = await Department.find({}).sort({ name: 1 });
         
         const staffMembers = await Staff.find({ role: { $in: ['Receptionist', 'Doctor'] } })
-                                .select('-password').sort({ role: 1 });
+                                .sort({ role: 1 });
 
         return NextResponse.json({ success: true, doctors, totalTokensToday, departments, staffMembers });
     } catch (error) {
@@ -72,6 +73,12 @@ export async function PUT(req) {
     try {
         await connectDB();
         const { id, ...updateData } = await req.json();
+
+        // 🔐 Agar password update ho raha hai toh use hash karna zaroori hai
+        if (updateData.password) {
+            updateData.password = await bcrypt.hash(updateData.password, 10);
+        }
+
         await Staff.findByIdAndUpdate(id, updateData);
         return NextResponse.json({ success: true, message: "Updated successfully!" });
     } catch (error) {
@@ -83,12 +90,18 @@ export async function DELETE(req) {
     try {
         await connectDB();
         const { id, type } = await req.json();
-        
-        if (type === 'STAFF') await Staff.findByIdAndDelete(id);
-        else await Department.findByIdAndDelete(id);
 
-        return NextResponse.json({ success: true, message: "Removed successfully!" });
+        if (!id) return NextResponse.json({ success: false, error: "ID is required" }, { status: 400 });
+        
+        const result = type === 'STAFF' 
+            ? await Staff.findByIdAndDelete(id) 
+            : await Department.findByIdAndDelete(id);
+
+        console.log(`🗑️ Deleted ${type}: ${id} - Status: ${result ? 'Success' : 'Not Found'}`);
+
+        return NextResponse.json({ success: true, message: `${type} removed successfully!` });
     } catch (error) {
+        console.error("Delete Error:", error);
         return NextResponse.json({ success: false, error: "Failed" }, { status: 500 });
     }
 }
