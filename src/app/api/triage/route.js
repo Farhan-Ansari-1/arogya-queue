@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import connectDB from '@/lib/mongodb';
 import Token from '@/models/Token';
-import Doctor from '@/models/Doctor';
+import Staff from '@/models/Staff';
 import Department from '@/models/Department'; // Load dynamic departments
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -63,7 +63,7 @@ export async function POST(req) {
         }
 
         // 3. DOCTOR ROUTING
-        const assignedDoctor = await Doctor.findOne({ department: predictedDepartment, isAvailable: true });
+        const assignedDoctor = await Staff.findOne({ role: 'Doctor', department: predictedDepartment, isAvailable: true });
         const doctorName = assignedDoctor ? assignedDoctor.name : "On Duty Consultant";
         const roomNumber = assignedDoctor ? assignedDoctor.roomNumber : "Check Screen";
 
@@ -78,8 +78,8 @@ export async function POST(req) {
         // 5. CLOUD STORAGE SAVE
         const newToken = new Token({
             name, age: Number(age), gender, mobile, symptoms,
-            assigned_department: predictedDepartment,
-            token_number: nextTokenNumber, unique_token_id: uniqueTokenId, date: todayStr
+            assigned_department: predictedDepartment, token_number: nextTokenNumber,
+            unique_token_id: uniqueTokenId, date: new Date(todayStr) // Convert to Date object
         });
         await newToken.save();
 

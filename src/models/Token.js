@@ -10,7 +10,7 @@ const TokenSchema = new mongoose.Schema({
   token_number: { type: Number, required: true },
   unique_token_id: { type: String, required: true, unique: true },
   status: { type: String, default: 'Pending' }, // Pending, Checked_In, Completed
-  date: { type: String, required: true } // format: YYYY-MM-DD (Daily reset logic ke liye)
+  date: { type: Date, required: true } // Store as Date object for better querying
 }, { timestamps: true });
 
 // Next.js ke serverless behavior ki wajah se hume check karna padta hai ki model pehle se bana hai ya nahi

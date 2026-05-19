@@ -1,83 +1,94 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import Doctor from '@/models/Doctor';
 import Token from '@/models/Token';
+import bcrypt from 'bcryptjs';
 import Department from '@/models/Department';
+import Staff from '@/models/Staff';
 
-// 📋 1. GET: Saare doctors, total tokens aur departments lana
-export async function GET() {
+export async function GET(req) {
     try {
         await connectDB();
         const todayStr = new Date().toISOString().split('T')[0];
 
-        const doctors = await Doctor.find({}).sort({ createdAt: -1 });
+        const doctors = await Staff.find({ role: 'Doctor' }).sort({ createdAt: -1 }); // No change needed here for date string
         const totalTokensToday = await Token.countDocuments({ date: todayStr });
         const departments = await Department.find({}).sort({ name: 1 });
+        
+        const staffMembers = await Staff.find({ role: { $in: ['Receptionist', 'Doctor'] } })
+                                .select('-password').sort({ role: 1 });
 
-        return NextResponse.json({ success: true, doctors, totalTokensToday, departments });
+        return NextResponse.json({ success: true, doctors, totalTokensToday, departments, staffMembers });
     } catch (error) {
-        console.error("Admin GET Error:", error);
-        return NextResponse.json({ success: false, error: "Failed to fetch admin data" }, { status: 500 });
+        console.error("Admin API GET Error:", error);
+        return NextResponse.json({ success: false, error: "Database Fetch Failed" }, { status: 500 });
     }
 }
 
-// ➕ 2. POST: Doctor ya Department add karna
 export async function POST(req) {
     try {
         await connectDB();
-        const body = await req.json();
+        const { username, password, name, role, department, roomNumber, departmentName, departmentCode } = await req.json();
 
-        if (body.type === 'DEPARTMENT') {
-            const { deptName, deptCode } = body;
-            if (!deptName || !deptCode) {
-                return NextResponse.json({ success: false, error: "Name and Code are required" }, { status: 400 });
+        // Handle Department Creation
+        if (departmentName && departmentCode) {
+            const existingDept = await Department.findOne({ $or: [{ name: departmentName }, { code: departmentCode }] });
+            if (existingDept) {
+                return NextResponse.json({ success: false, error: "Department name or code already exists!" }, { status: 400 });
             }
-            const newDept = new Department({ name: deptName.trim(), code: deptCode.trim().toUpperCase() });
-            await newDept.save();
-            return NextResponse.json({ success: true, message: "Department added!" });
+            const newDepartment = new Department({ name: departmentName, code: departmentCode.toUpperCase() });
+            await newDepartment.save();
+            return NextResponse.json({ success: true, message: "Department added successfully!" });
         }
 
-        const { name, department, roomNumber } = body;
-        if (!name || !department || !roomNumber) {
-            return NextResponse.json({ success: false, error: "All doctor fields are required" }, { status: 400 });
+        // Handle Staff Registration
+        if (username && password && name && role) {
+            const existingStaff = await Staff.findOne({ username: username.toLowerCase().trim() });
+            if (existingStaff) {
+                return NextResponse.json({ success: false, error: "Username pehle se maujood hai! Kuch alag rakhein." }, { status: 400 });
+            }
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const newStaff = new Staff({
+                username: username.toLowerCase().trim(),
+                password: hashedPassword,
+                name,
+                role,
+                department: role === 'Doctor' ? department : null,
+                roomNumber: role === 'Doctor' ? roomNumber : null,
+                isAvailable: role === 'Doctor' ? true : undefined
+            });
+            await newStaff.save();
+            return NextResponse.json({ success: true, message: `${role} registered successfully!` });
         }
 
-        const newDoctor = new Doctor({ name, department, roomNumber });
-        await newDoctor.save();
-        return NextResponse.json({ success: true, message: "Doctor added!" });
+        return NextResponse.json({ success: false, error: "Invalid request data." }, { status: 400 });
 
     } catch (error) {
-        console.error("Admin POST Error:", error);
-        return NextResponse.json({ success: false, error: "Duplicate entry or process error." }, { status: 500 });
+        console.error("Admin API POST Error:", error);
+        return NextResponse.json({ success: false, error: "Registration/Creation Failed" }, { status: 500 });
     }
 }
 
-// 🔄 3. PUT: Doctor update logic
 export async function PUT(req) {
     try {
         await connectDB();
-        const { id, name, department, roomNumber, isAvailable } = await req.json();
-        await Doctor.findByIdAndUpdate(id, { name, department, roomNumber, isAvailable });
+        const { id, ...updateData } = await req.json();
+        await Staff.findByIdAndUpdate(id, updateData);
         return NextResponse.json({ success: true, message: "Updated successfully!" });
     } catch (error) {
         return NextResponse.json({ success: false, error: "Update Failed" }, { status: 500 });
     }
 }
 
-// 🗑️ 4. DELETE: Department ko system se permanently hatana
 export async function DELETE(req) {
     try {
         await connectDB();
-        const { id } = await req.json();
+        const { id, type } = await req.json();
+        
+        if (type === 'STAFF') await Staff.findByIdAndDelete(id);
+        else await Department.findByIdAndDelete(id);
 
-        if (!id) {
-            return NextResponse.json({ success: false, error: "Department ID is required" }, { status: 400 });
-        }
-
-        await Department.findByIdAndDelete(id);
-        return NextResponse.json({ success: true, message: "Department removed successfully!" });
+        return NextResponse.json({ success: true, message: "Removed successfully!" });
     } catch (error) {
-        console.error("Admin DELETE Error:", error);
-        return NextResponse.json({ success: false, error: "Failed to delete department" }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Failed" }, { status: 500 });
     }
 }

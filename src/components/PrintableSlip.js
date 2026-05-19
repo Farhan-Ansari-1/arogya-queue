@@ -1,22 +1,45 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Printer } from "lucide-react";
 
 export default function PrintableSlip({ result, name, age, gender, mobile }) {
   const slipRef = useRef();
+  const [mounted, setMounted] = useState(false);
+  const [currentDate, setCurrentDate] = useState("");
+  const [currentTime, setCurrentTime] = useState("");
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setCurrentDate(new Date().toLocaleDateString("en-IN"));
+      setCurrentTime(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+      setMounted(true);
+    });
+  }, []);
 
   if (!result) return null;
+  
+  // Mismatch se bachne ke liye hydration tak wait karein
+  if (!mounted) return <div className="p-10 text-center text-slate-500">Generating Slip...</div>;
 
   const handlePrint = () => {
-    const printContent = slipRef.current.innerHTML;
-    const originalContent = document.body.innerHTML;
-
-    document.body.innerHTML = printContent;
-    window.print();
-
-    document.body.innerHTML = originalContent;
-    window.location.reload();
+    const content = slipRef.current.innerHTML;
+    const printWindow = window.open('', '_blank', 'width=600,height=600');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Hospital Token Slip</title>
+          <style>
+            body { font-family: monospace; padding: 20px; }
+            .text-center { text-align: center; }
+            /* Tailwinds styles ko yahan inline copy kar sakte ho ya basic CSS likh sakte ho */
+          </style>
+        </head>
+        <body>${content}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   return (
@@ -31,16 +54,12 @@ export default function PrintableSlip({ result, name, age, gender, mobile }) {
         <div className="text-center border-b-2 border-dashed border-black pb-3 mb-3 space-y-0.5">
           <h2 className="text-md font-black tracking-wide uppercase">
             I.G.M. HOSPITAL, BHIWANDI
-          </h2>{" "}
+          </h2>
           <p className="text-[10px] text-gray-600 uppercase font-sans font-bold">
             OPD Smart Queue System
           </p>
           <p className="text-[9px] text-gray-500 font-sans">
-            Date: {new Date().toLocaleDateString("en-IN")} | Time:{" "}
-            {new Date().toLocaleTimeString("en-IN", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            Date: {currentDate} | Time: {currentTime}
           </p>
         </div>
 

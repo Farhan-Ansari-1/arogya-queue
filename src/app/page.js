@@ -47,7 +47,8 @@ export default function Home() {
           <Activity className="animate-pulse" size={36} />
           <h1>ArogyaQueue</h1>
         </div>
-<p className="text-slate-400 text-sm">I.G.M. Hospital, Bhiwandi — Online OPD Token Desk</p>      </div>
+        <p className="text-slate-400 text-sm">I.G.M. Hospital, Bhiwandi — Online OPD Token Desk</p>
+      </div>
 
       <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
         {!result ? (

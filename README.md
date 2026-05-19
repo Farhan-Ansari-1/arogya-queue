@@ -19,10 +19,11 @@ The platform modernizes traditional hospital OPD workflows by combining:
 * 📱 Digital self-ticketing
 * 🧠 AI-based patient triage
 * 👨‍⚕️ Doctor queue management
+* 🔐 Secure JWT-based Authentication & RBAC
 * 🏢 Reception desk operations
 * ⚙️ Real-time administrative control
 
-Powered by **Gemini 2.5 Flash**, the system intelligently analyzes patient symptoms and routes them to the correct medical department automatically.
+Powered by **Gemini 2.5 Flash**, the system intelligently analyzes patient symptoms and routes them to the correct medical department fetched dynamically from the database.
 
 ---
 
@@ -60,7 +61,7 @@ Designed for citizens using smartphones from home or hospital waiting areas.
 
 * Patient registration form
 * Natural-language symptom input
-* AI-based department routing
+* AI-based department routing (Dynamic)
 * Real-time token generation
 * Instant digital OPD slip
 
@@ -107,10 +108,12 @@ Live queue management system for OPD consultants.
 
 ## ⚙️ Master Admin Control Room (`/admin`)
 
-Centralized hospital management dashboard.
+Centralized hospital management dashboard with full CRUD capabilities.
 
 ### Features
 
+* **Staff Management:** Register, update, and remove Doctors and Receptionists.
+* **Secure Setup:** Master Key protected admin initialization.
 #### 🏭 Dynamic Department Factory
 
 Admin can:

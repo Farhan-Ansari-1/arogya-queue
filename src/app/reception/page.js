@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Monitor, ArrowRight, AlertTriangle } from "lucide-react";
 import PrintableSlip from "@/components/PrintableSlip";
 
@@ -12,6 +13,28 @@ export default function ReceptionDesk() {
   const [symptoms, setSymptoms] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    if (["Receptionist", "Admin"].includes(role)) {
+      Promise.resolve().then(() => {
+        setAuthorized(true);
+      });
+    } else {
+      router.push("/login");
+    }
+  }, [router]);
+
+  if (!authorized) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center">
+        <p className="text-sm font-mono animate-pulse text-slate-400">Verifying Counter Credentials...</p>
+      </div>
+    );
+  }
 
   const handleReceptionSubmit = async (e) => {
     e.preventDefault();
@@ -58,7 +81,7 @@ export default function ReceptionDesk() {
         </div>
         <p className="text-slate-400 text-sm">
           I.G.M. Hospital, Bhiwandi — Main OPD Reception Counter
-        </p>{" "}
+        </p>
       </div>
 
       <div className="w-full max-w-xl bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl">
