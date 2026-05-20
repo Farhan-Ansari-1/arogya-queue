@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { Line } from 'react-chartjs-2'; // Chart.js ko install karna padega
 import { useRouter } from 'next/navigation';
 import { Plus, Edit3, Save, Trash2, ToggleLeft, ToggleRight, Building2, UserPlus, Users, RefreshCw, LogOut, KeyRound } from 'lucide-react';
 
@@ -30,6 +31,12 @@ export default function AdminDashboard() {
   const [editDept, setEditDept] = useState('');
   const [editRoom, setEditRoom] = useState('');
 
+  // Analytics States
+  const [analyticsData, setAnalyticsData] = useState([]);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('daily');
+  const [selectedAnalyticsDepartment, setSelectedAnalyticsDepartment] = useState('All');
+  const [showTableView, setShowTableView] = useState(false);
+
   const router = useRouter();
 
   // 🔄 2. THE CHIEF FETCH FUNCTION (Wrapped inside useCallback to satisfy ESLint)
@@ -50,21 +57,144 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // 🛡️ 1 & 3. CONSOLIDATED SECURITY & DATA FETCH (Prevents cascading renders)
+  // 📈 Analytics synchronization effect
+  // Ye effect tab chalega jab authorized true ho ya filters change hon
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (authorized) {
+        try {
+          const response = await fetch(`/api/admin/analytics?timeframe=${selectedTimeframe}&department=${selectedAnalyticsDepartment}`);
+          const data = await response.json();
+          if (data.success) {
+            setAnalyticsData(data.data);
+          } else {
+            console.error("Failed to fetch analytics:", data.error);
+          }
+        } catch (error) {
+          console.error("Analytics Fetch Error:", error);
+        }
+      }
+    }
+    fetchAnalytics();
+  }, [authorized, selectedTimeframe, selectedAnalyticsDepartment]);
+
+  // �️ 1 & 3. CONSOLIDATED SECURITY & DATA FETCH (Prevents cascading renders)
+  // Chart.js registration (only once)
+  useEffect(() => {
+    // Dynamically import Chart.js components to avoid server-side rendering issues
+    import('chart.js').then(Chart => {
+      Chart.Chart.register(
+        Chart.CategoryScale,
+        Chart.LinearScale,
+        Chart.PointElement,
+        Chart.LineElement,
+        Chart.Title,
+        Chart.Tooltip,
+        Chart.Legend
+      );
+    });
+  }, []);
+
+
   useEffect(() => {
     const initDashboard = async () => {
       const role = localStorage.getItem('userRole');
       if (role !== 'Admin') {
         router.push('/login');
       } else {
-        Promise.resolve().then(async () => {
-          setAuthorized(true);
-          await fetchAdminData();
-        });
+        setAuthorized(true);
+        fetchAdminData();
       }
     };
     initDashboard();
   }, [router, fetchAdminData]);
+
+  // 📊 Chart Data Generator
+  const getChartData = () => {
+    if (!analyticsData || analyticsData.length === 0) return { labels: [], datasets: [] };
+
+    const labelsSet = new Set();
+    const departmentData = {};
+
+    analyticsData.forEach(item => {
+      let label = `${item._id.year}`;
+      if (item._id.month) label += `-${String(item._id.month).padStart(2, '0')}`;
+      if (item._id.day) label += `-${String(item._id.day).padStart(2, '0')}`;
+      
+      labelsSet.add(label);
+      const dept = item._id.department || 'Total';
+      if (!departmentData[dept]) departmentData[dept] = {};
+      departmentData[dept][label] = item.count;
+    });
+
+    const sortedLabels = Array.from(labelsSet).sort();
+    const datasets = Object.keys(departmentData).map((dept, i) => ({
+      label: dept,
+      data: sortedLabels.map(l => departmentData[dept][l] || 0),
+      borderColor: ['#60a5fa', '#34d399', '#a78bfa', '#fbbf24', '#f87171'][i % 5],
+      backgroundColor: 'transparent',
+      tension: 0.3,
+      pointRadius: 4
+    }));
+
+    return { labels: sortedLabels, datasets };
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { color: '#94a3b8', font: { size: 10 } } },
+    },
+    scales: {
+      x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.5)' } },
+      y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.5)' }, beginAtZero: true }
+    }
+  };
+
+  // 📥 Download CSV Logic
+  const handleDownload = () => {
+    if (!analyticsData || analyticsData.length === 0) {
+      alert("No data available to download / डाउनलोड करने के लिए कोई डेटा नहीं है।");
+      return;
+    }
+
+    const isOverall = selectedTimeframe === 'overall';
+
+    // Headers
+    const headers = isOverall 
+      ? ["Department", "PatientCount"] 
+      : ["Year", "Month", "Day", "Department", "PatientCount"];
+    
+    // Formatting data for CSV
+    const rows = analyticsData.map(item => {
+      if (isOverall) {
+        return [item._id.department || "All", item.count];
+      }
+      return [
+        item._id.year,
+        item._id.month || "-",
+        item._id.day || "-",
+        item._id.department || "All",
+        item.count
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `IGM_Analytics_${selectedTimeframe}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleAddDepartment = async (e) => {
     e.preventDefault();
@@ -297,6 +427,85 @@ export default function AdminDashboard() {
           <p className="text-sm text-slate-400">Total Staff</p>
           <p className="text-3xl font-bold text-purple-400">{staffList.length}</p>
         </div>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="max-w-7xl mx-auto bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl mt-8">
+        <h2 className="text-lg font-semibold text-slate-200 border-b border-slate-700 pb-3 mb-4 flex items-center justify-between">
+          <span>📊 Department Analytics</span>
+          <div className="flex gap-2">
+            <select
+              value={selectedAnalyticsDepartment}
+              onChange={(e) => setSelectedAnalyticsDepartment(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+            >
+              <option value="All">All Departments</option>
+              {departments.map(dept => (
+                <option key={dept._id} value={dept.name}>{dept.name}</option>
+              ))}
+            </select>
+            <select
+              value={selectedTimeframe}
+              onChange={(e) => setSelectedTimeframe(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="6month">Last 6 Months</option>
+              <option value="yearly">Last Year</option>
+              <option value="overall">Overall</option>
+            </select>
+            <button
+              onClick={() => setShowTableView(!showTableView)}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-1 px-3 rounded-lg text-xs transition-all"
+            >
+              {showTableView ? "Show Graph" : "Show Table"}
+            </button>
+            {/* Download button will go here */}
+          </div>
+        </h2>
+
+        {showTableView ? (
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-sm text-slate-400">
+              <thead className="text-xs text-slate-200 uppercase bg-slate-700">
+                <tr>
+                  <th scope="col" className="px-6 py-3">Date/Period</th>
+                  <th scope="col" className="px-6 py-3">Department</th>
+                  <th scope="col" className="px-6 py-3">Patients</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analyticsData.map((item, index) => (
+                  <tr key={index} className="bg-slate-800 border-b border-slate-700 hover:bg-slate-700">
+                    <td className="px-6 py-4 font-medium text-slate-100 whitespace-nowrap">
+                      {item._id.year}
+                      {item._id.month ? `-${String(item._id.month).padStart(2, '0')}` : ''}
+                      {item._id.day ? `-${String(item._id.day).padStart(2, '0')}` : ''}
+                    </td>
+                    <td className="px-6 py-4">{item._id.department || 'N/A'}</td>
+                    <td className="px-6 py-4">{item.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="h-80"> {/* Adjust height as needed */}
+            {analyticsData.length > 0 && selectedTimeframe !== 'overall' ? (
+              <Line data={getChartData()} options={chartOptions} />
+            ) : (
+              <p className="text-center text-slate-500 mt-20">No data available for graph or &apos;Overall&apos; timeframe selected.</p>
+            )}
+          </div>
+        )}
+        <button
+          onClick={handleDownload}
+          className="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 px-5 rounded-lg text-sm transition-all shadow-lg flex items-center gap-2"
+        >
+          Download Data (CSV)
+        </button>
       </div>
 
       {/* Forms and Lists */}

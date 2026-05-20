@@ -78,16 +78,13 @@ export async function POST(req) {
         if (departmentNames.length > 0) {
             try {
                 // Gemini ko live system instructions dena aaj ki current department list ke sath
-                const systemInstruction = `You are a medical triage system. Your strict job is to analyze symptoms and reply with EXACTLY ONE department name from this dynamically allowed list: ${departmentNames.join(', ')}. 
+                const systemInstruction = `You are a medical triage system. Analyze symptoms and reply with EXACTLY ONE department name from this list: ${departmentNames.join(', ')}. 
                 Do not write full sentences, punctuation, or reasoning. If symptoms don't perfectly match specialized departments, default strictly to '${predictedDepartment}'.`;
 
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: `Patient Symptoms: "${symptoms}"`,
-                    config: { systemInstruction, temperature: 0.1 }
-                });
+                const model = ai.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction });
+                const result = await model.generateContent(`Patient Symptoms: "${symptoms}"`);
+                const aiText = result.response.text().trim();
 
-                const aiText = response.text ? response.text.trim() : "";
                 if (departmentNames.includes(aiText)) {
                     predictedDepartment = aiText;
                 }
