@@ -2,39 +2,50 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Monitor, ArrowRight, AlertTriangle } from "lucide-react";
+import { Monitor, ArrowRight, AlertTriangle, Fingerprint, User, Calendar, Users, Smartphone, MessageSquare } from "lucide-react";
 import PrintableSlip from "@/components/PrintableSlip";
 
 export default function ReceptionDesk() {
+  const [aadhaar, setAadhaar] = useState("");
   const [name, setName] = useState("");
-  const [age, setAge] = useState("");
+  const [dob, setDob] = useState("");
   const [gender, setGender] = useState("Male");
   const [mobile, setMobile] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isLookupLoading, setIsLookupLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
-
+  // 🔍 Auto-fill Logic for Reception
   useEffect(() => {
-    const role = localStorage.getItem("userRole");
-    if (["Receptionist", "Admin"].includes(role)) {
-      Promise.resolve().then(() => {
-        setAuthorized(true);
-      });
-    } else {
-      router.push("/login");
-    }
-  }, [router]);
-
-  if (!authorized) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center">
-        <p className="text-sm font-mono animate-pulse text-slate-400">Verifying Counter Credentials...</p>
-      </div>
-    );
-  }
+    const lookupPatient = async () => {
+      if (aadhaar.length === 12) {
+        setIsLookupLoading(true);
+        try {
+          const res = await fetch("/api/patient/lookup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ aadhaar }),
+          });
+          const data = await res.json();
+          
+          if (data.success && data.exists) {
+            const p = data.data;
+            setName(p.name);
+            setDob(p.dob ? new Date(p.dob).toISOString().split('T')[0] : "");
+            setGender(p.gender);
+            setMobile(p.mobile);
+            console.log("✅ Patient record found at reception.");
+          }
+        } catch (err) {
+          console.error("Reception lookup failed:", err);
+        } finally {
+          setIsLookupLoading(false);
+        }
+      }
+    };
+    lookupPatient();
+  }, [aadhaar]);
 
   const handleReceptionSubmit = async (e) => {
     e.preventDefault();
@@ -45,7 +56,7 @@ export default function ReceptionDesk() {
       const response = await fetch("/api/triage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symptoms, name, age, gender, mobile }),
+        body: JSON.stringify({ symptoms, name, dob, gender, mobile, aadhaar }),
       });
 
       const data = await response.json();
@@ -64,11 +75,18 @@ export default function ReceptionDesk() {
 
   const resetForm = () => {
     setResult(null);
+    setAadhaar("");
     setName("");
-    setAge("");
+    setDob("");
     setGender("Male");
     setMobile("");
     setSymptoms("");
+  };
+
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return 0;
+    const birthDate = new Date(dateOfBirth);
+    return new Date().getFullYear() - birthDate.getFullYear();
   };
 
   return (
@@ -97,68 +115,91 @@ export default function ReceptionDesk() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Patient Full Name (मरीज का नाम)
+              <label className="text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                <Fingerprint size={12} className={isLookupLoading ? "text-blue-400 animate-pulse" : ""} /> Aadhaar Number (आधार नंबर)
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={12}
+                value={aadhaar}
+                onChange={(e) => setAadhaar(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
+                placeholder="12 digit Aadhaar..."
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                <User size={12} /> Patient Full Name (मरीज का नाम)
               </label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-blue-500 uppercase text-sm"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-blue-500 text-sm"
                 placeholder="Type patient's name..."
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Age (उम्र)
+                <label className="text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                  <Calendar size={12} /> DOB (जन्म तिथि)
                 </label>
-                <input
-                  type="number"
-                  required
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                  placeholder="Years"
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    required
+                    value={dob}
+                    onChange={(e) => setDob(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 scheme-dark"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Gender (लिंग)
+                <label className="text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                  <Users size={12} /> Gender (लिंग)
                 </label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 appearance-none"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Mobile Number (मोबाइल नंबर)
+              <label className="text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                <Smartphone size={12} /> Mobile Number (मोबाइल नंबर)
               </label>
-              <input
-                type="tel"
-                required
-                pattern="[0-9]{10}"
-                maxLength={10}
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                placeholder="Enter 10 digit number"
-              />
+              <div className="relative">
+                <input
+                  type="tel"
+                  required
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                  placeholder="10 digit number"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Chief Complaints / Symptoms (बीमारी की शिकायत)
+              <label className="text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                <MessageSquare size={12} /> Chief Complaints / Symptoms (बीमारी की शिकायत)
               </label>
               <textarea
                 required
@@ -205,7 +246,7 @@ export default function ReceptionDesk() {
               <PrintableSlip
                 result={result}
                 name={name}
-                age={age}
+                age={calculateAge(dob)}
                 gender={gender}
                 mobile={mobile}
               />

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const TokenSchema = new mongoose.Schema({
+  patient_id: { type: String, required: true }, // Link to Patient.patientId
   name: { type: String, required: true },
   age: { type: Number, required: true },
   gender: { type: String, required: true },

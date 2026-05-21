@@ -7,13 +7,19 @@ import { Users, CheckCircle, RefreshCw, LogOut } from 'lucide-react';
 export default function DoctorDashboard() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [doctorDept, setDoctorDept] = useState('General Medicine');
-  const [doctorName, setDoctorName] = useState('On Duty Consultant');
-  const [authorized, setAuthorized] = useState(false);
   const router = useRouter();
 
+  // State management
+  const [session, setSession] = useState({
+    isReady: false,
+    name: 'On Duty Consultant',
+    dept: 'General Medicine'
+  });
+
   const fetchQueue = useCallback(async () => {
-    setLoading(true);
+    // We don't call setLoading(true) here anymore to prevent cascading renders.
+    // We'll set it manually on the refresh button click.
+    
     try {
       const response = await fetch('/api/doctor');
       const resData = await response.json();
@@ -45,38 +51,44 @@ export default function DoctorDashboard() {
 
   // 🛡️ SECURITY & SESSION PARSING
   useEffect(() => {
-    const role = localStorage.getItem('userRole');
-    const name = localStorage.getItem('userName');
-    const dept = localStorage.getItem('userDept');
-
-    if (role === 'Doctor' || role === 'Admin') {
-      Promise.resolve().then(() => {
-        setAuthorized(true);
-        if (name) setDoctorName(name);
-        if (dept) setDoctorDept(dept);
-        fetchQueue();
+    const storedName = localStorage.getItem('userName');
+    const storedDept = localStorage.getItem('userDept');
+    
+    // Deferred state update to prevent "cascading render" warning
+    Promise.resolve().then(() => {
+      setSession({
+        isReady: true,
+        name: storedName || 'On Duty Consultant',
+        dept: storedDept || 'General Medicine'
       });
-    } else {
-      router.push('/login');
-    }
+      fetchQueue();
+    });
 
     // Auto-refresh queue every 30 seconds
     const interval = setInterval(fetchQueue, 30000);
     return () => clearInterval(interval);
-  }, [fetchQueue, router]);
+  }, [fetchQueue]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      localStorage.clear();
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Logout fail ho gaya.");
+    }
   };
 
   // 🔥 INTELLIGENT FILTERING: Sirf is logged-in doctor ke dept ke mareez dikhana
-  const filteredPatients = patients.filter(p => p.assigned_department === doctorDept);
+  const filteredPatients = patients.filter(p => p.assigned_department === session.dept);
 
-  if (!authorized) {
+  // Avoid Hydration Mismatch & Performance warnings by waiting for mount
+  if (!session.isReady) {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center">
-        <p className="text-sm font-mono animate-pulse text-slate-400">Verifying Clinic Session...</p>
+        <RefreshCw className="animate-spin text-emerald-400 mr-2" size={20} />
+        <p className="text-sm font-mono text-slate-400">Loading Clinic Session...</p>
       </div>
     );
   }
@@ -88,14 +100,17 @@ export default function DoctorDashboard() {
         <div className="flex items-center gap-3">
           <Users className="text-emerald-400" size={32} />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{doctorName} Center</h1>
-            <p className="text-xs text-slate-400">I.G.M. Hospital — Active Cabin Wards for <strong className="text-emerald-400">{doctorDept}</strong></p>
+            <h1 className="text-2xl font-bold tracking-tight">{session.name} Center</h1>
+            <p className="text-xs text-slate-400">I.G.M. Hospital — Active Cabin Wards for <strong className="text-emerald-400">{session.dept}</strong></p>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           <button 
-            onClick={fetchQueue}
+            onClick={() => {
+              setLoading(true);
+              fetchQueue();
+            }}
             className="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2 rounded-lg text-slate-400 hover:text-emerald-400 transition-all"
           >
             <RefreshCw size={18} />
@@ -129,7 +144,7 @@ export default function DoctorDashboard() {
               </div>
             ) : (
               <div className="text-center text-slate-500 py-12 italic text-sm">
-                No active patients in {doctorDept}.
+                No active patients in {session.dept}.
               </div>
             )}
           </div>

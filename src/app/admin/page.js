@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Plus, Edit3, Save, Trash2, ToggleLeft, ToggleRight, Building2, UserPlus, Users, RefreshCw, LogOut, KeyRound } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [authorized, setAuthorized] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [totalTokens, setTotalTokens] = useState(0);
@@ -61,22 +60,20 @@ export default function AdminDashboard() {
   // Ye effect tab chalega jab authorized true ho ya filters change hon
   useEffect(() => {
     const fetchAnalytics = async () => {
-      if (authorized) {
-        try {
-          const response = await fetch(`/api/admin/analytics?timeframe=${selectedTimeframe}&department=${selectedAnalyticsDepartment}`);
-          const data = await response.json();
-          if (data.success) {
-            setAnalyticsData(data.data);
-          } else {
-            console.error("Failed to fetch analytics:", data.error);
-          }
-        } catch (error) {
-          console.error("Analytics Fetch Error:", error);
+      try {
+        const response = await fetch(`/api/admin/analytics?timeframe=${selectedTimeframe}&department=${selectedAnalyticsDepartment}`);
+        const data = await response.json();
+        if (data.success) {
+          setAnalyticsData(data.data);
+        } else {
+          console.error("Failed to fetch analytics:", data.error);
         }
+      } catch (error) {
+        console.error("Analytics Fetch Error:", error);
       }
     }
     fetchAnalytics();
-  }, [authorized, selectedTimeframe, selectedAnalyticsDepartment]);
+  }, [selectedTimeframe, selectedAnalyticsDepartment]);
 
   // �️ 1 & 3. CONSOLIDATED SECURITY & DATA FETCH (Prevents cascading renders)
   // Chart.js registration (only once)
@@ -97,17 +94,8 @@ export default function AdminDashboard() {
 
 
   useEffect(() => {
-    const initDashboard = async () => {
-      const role = localStorage.getItem('userRole');
-      if (role !== 'Admin') {
-        router.push('/login');
-      } else {
-        setAuthorized(true);
-        fetchAdminData();
-      }
-    };
-    initDashboard();
-  }, [router, fetchAdminData]);
+    fetchAdminData();
+  }, [fetchAdminData]);
 
   // 📊 Chart Data Generator
   const getChartData = () => {
@@ -377,13 +365,6 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!authorized) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center">
-        <p className="text-sm font-mono animate-pulse text-slate-400">Verifying Admin Credentials...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6">

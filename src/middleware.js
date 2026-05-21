@@ -5,9 +5,13 @@ export async function middleware(request) {
   const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
 
+  // Routes prefixes that need protection
+  const protectedPrefixes = ['/admin', '/doctor', '/reception', '/api/admin', '/api/doctor', '/api/reception'];
+  const isProtectedRoute = protectedPrefixes.some(prefix => pathname.startsWith(prefix));
+
   // Agar token nahi hai aur user protected route par hai
   if (!token) {
-    if (pathname.startsWith('/admin') || pathname.startsWith('/doctor') || pathname.startsWith('/reception') || pathname.startsWith('/api/admin')) {
+    if (isProtectedRoute) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
     return NextResponse.next();
@@ -50,11 +54,11 @@ export async function middleware(request) {
 // Konse paths par middleware chalana hai
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/doctor/:path*',
-    '/reception/:path*',
-    '/api/admin/:path*',
-    '/api/doctor/:path*',
-    '/api/reception/:path*',
+    '/admin', '/admin/:path*',
+    '/doctor', '/doctor/:path*',
+    '/reception', '/reception/:path*',
+    '/api/admin', '/api/admin/:path*',
+    '/api/doctor', '/api/doctor/:path*',
+    '/api/reception', '/api/reception/:path*',
   ],
 };

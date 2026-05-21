@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import crypto from 'crypto';
 import connectDB from '@/lib/mongodb';
 import Token from '@/models/Token';
 import Staff from '@/models/Staff';
 import Department from '@/models/Department'; // Load dynamic departments
 import RateLimit from '@/models/RateLimit';
+import Patient from '@/models/Patient';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const EMERGENCY_KEYWORDS = ["chest pain", "heart attack", "dil me dard", "saans nahi aa rahi", "heavy bleeding", "khoon beh raha hai", "accident", "unconscious", "behoshi"];
@@ -31,10 +33,10 @@ async function checkRateLimit(id, limit, windowMs) {
 export async function POST(req) {
     try {
         await connectDB();
-        const { symptoms, name, age, gender, mobile } = await req.json();
+        const { symptoms, name, dob, gender, mobile, aadhaar } = await req.json();
 
-        if (!symptoms || !mobile) {
-            return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+        if (!symptoms || !mobile || !aadhaar || !dob) {
+            return NextResponse.json({ success: false, error: "Zaroori jaankari gayab hai!" }, { status: 400 });
         }
 
         // 🛡️ RATE LIMITING (Prevent Spam)
@@ -47,9 +49,48 @@ export async function POST(req) {
         }
 
         // Limit: 2 per hour per Mobile Number
-        if (!(await checkRateLimit(`MOB_${mobile}`, 2, 60 * 60 * 1000))) {
+        if (!(await checkRateLimit(`MOB_${mobile}`, 10, 60 * 60 * 1000))) {
             return NextResponse.json({ success: false, error: "Spam detected: Too many tokens for this number. Try later." }, { status: 429 });
         }
+
+        // 🔐 PATIENT IDENTIFICATION (Aadhaar Hashing & Unique ID)
+        const aadhaarHash = crypto.createHash('sha256').update(aadhaar).digest('hex');
+        let patient = await Patient.findOne({ aadhaarHash });
+
+        if (!patient) {
+            // Naya Patient - Generate Unique ID
+            // Logic: Name(2) + YYYYMMDD + AadhaarLast4
+            const dobDate = new Date(dob);
+            const dobFormatted = dobDate.toISOString().split('T')[0].replace(/-/g, '');
+            const namePart = name.substring(0, 2).toUpperCase();
+            const aadhaarLastFour = aadhaar.slice(-4);
+            const generatedId = `${namePart}${dobFormatted}${aadhaarLastFour}`;
+
+            patient = new Patient({
+                patientId: generatedId,
+                name,
+                dob: dobDate,
+                gender,
+                mobile,
+                aadhaarHash,
+                aadhaarLastFour
+            });
+            await patient.save();
+            console.log("🆕 New Patient Registered:", generatedId);
+        } else {
+            // Update existing patient if details changed
+            patient.name = name;
+            patient.mobile = mobile;
+            patient.dob = new Date(dob);
+            patient.gender = gender;
+            await patient.save();
+            console.log("🏠 Returning Patient Info Updated:", patient.patientId);
+        }
+
+        // Calculate age from DOB for triage logic
+        const birthYear = new Date(dob).getFullYear();
+        const currentYear = new Date().getFullYear();
+        const calculatedAge = currentYear - birthYear;
 
         // 1. EMERGENCY GUARDRAIL
         const lowerSymptoms = symptoms.toLowerCase();
@@ -114,18 +155,24 @@ export async function POST(req) {
         }).sort({ token_number: -1 });
 
         nextTokenNumber = latestToken ? latestToken.token_number + 1 : 1;
-        uniqueTokenId = `AQ-${deptCode}-${nextTokenNumber}`;
+        
+        const dateStrShort = todayStr.replace(/-/g, ''); // e.g., 20260520
+        uniqueTokenId = `AQ-${deptCode}-${dateStrShort}-${nextTokenNumber}`;
 
-        // Double check for duplicate ID just in case of rapid clicks
-        const checkCollision = await Token.findOne({ unique_token_id: uniqueTokenId });
-        if (checkCollision) {
+        // Loop ensures we find the absolute next available ID even if multiple are taken
+        while (await Token.findOne({ unique_token_id: uniqueTokenId })) {
             nextTokenNumber += 1;
-            uniqueTokenId = `AQ-${deptCode}-${nextTokenNumber}`;
+            uniqueTokenId = `AQ-${deptCode}-${dateStrShort}-${nextTokenNumber}`;
         }
 
         // 5. CLOUD STORAGE SAVE
         const newToken = new Token({
-            name, age: Number(age), gender, mobile, symptoms,
+            patient_id: patient.patientId, // Link to Patient Unique ID
+            name: name, // Use current form name
+            age: calculatedAge, 
+            gender: gender, 
+            mobile: mobile, 
+            symptoms,
             assigned_department: predictedDepartment, 
             token_number: nextTokenNumber,
             unique_token_id: uniqueTokenId, 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Hospital,
   Phone,
@@ -11,18 +11,21 @@ import {
   Users,
   Smartphone,
   MessageSquare,
+  Fingerprint,
   Loader2,
 } from "lucide-react";
 import PrintableSlip from "@/components/PrintableSlip";
 
 export default function PatientPortal() {
   const [formData, setFormData] = useState({
+    aadhaar: "",
     name: "",
-    age: "",
+    dob: "",
     gender: "Male",
     mobile: "",
     symptoms: "",
   });
+  const [isLookupLoading, setIsLookupLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null); // To store the token generation result
@@ -31,6 +34,44 @@ export default function PatientPortal() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  // 🔍 Auto-fill Logic: Jaise hi Aadhaar 12 digit ka ho, lookup karo
+  useEffect(() => {
+    const lookupPatient = async () => {
+      if (formData.aadhaar.length === 12) {
+        setIsLookupLoading(true);
+        try {
+          const res = await fetch("/api/patient/lookup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ aadhaar: formData.aadhaar }),
+          });
+          const result = await res.json();
+          
+          if (result.success && result.exists) {
+            const p = result.data;
+            // Date format convert karna padta hai HTML date input ke liye (YYYY-MM-DD)
+            const formattedDOB = p.dob ? new Date(p.dob).toISOString().split('T')[0] : "";
+            
+            setFormData(prev => ({
+              ...prev,
+              name: p.name,
+              dob: formattedDOB,
+              gender: p.gender,
+              mobile: p.mobile
+            }));
+            console.log("✅ Patient found! Auto-filled details.");
+          }
+        } catch (err) {
+          console.error("Lookup failed:", err);
+        } finally {
+          setIsLookupLoading(false);
+        }
+      }
+    };
+
+    lookupPatient();
+  }, [formData.aadhaar]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,8 +92,9 @@ export default function PatientPortal() {
         setResult(data);
         // Optionally clear form after successful submission
         setFormData({
+          aadhaar: "",
           name: "",
-          age: "",
+          dob: "",
           gender: "Male",
           mobile: "",
           symptoms: "",
@@ -66,6 +108,13 @@ export default function PatientPortal() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to calculate age from DOB for the slip
+  const calculateAge = (dob) => {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    return new Date().getFullYear() - birthDate.getFullYear();
   };
 
   return (
@@ -92,7 +141,7 @@ export default function PatientPortal() {
           <PrintableSlip
             result={result}
             name={formData.name}
-            age={formData.age}
+            age={calculateAge(formData.dob)}
             gender={formData.gender}
             mobile={formData.mobile}
           />
@@ -109,6 +158,33 @@ export default function PatientPortal() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Aadhaar Number */}
+              <div>
+                <label
+                  htmlFor="aadhaar"
+                  className="block text-xs font-medium text-slate-600 mb-1"
+                >
+                  Aadhaar Number / आधार नंबर
+                </label>
+                <div className="relative">
+                  <Fingerprint
+                    className={`absolute left-3 top-2.5 ${isLookupLoading ? 'text-blue-500 animate-pulse' : 'text-slate-400'}`}
+                    size={16}
+                  />
+                  <input
+                    type="text"
+                    id="aadhaar"
+                    name="aadhaar"
+                    value={formData.aadhaar}
+                    onChange={handleChange}
+                    placeholder="12-digit Aadhaar / 12 अंकों का आधार"
+                    required
+                    maxLength={12}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
               {/* Name */}
               <div>
                 <label
@@ -135,14 +211,14 @@ export default function PatientPortal() {
                 </div>
               </div>
 
-              {/* Age & Gender */}
+              {/* DOB & Gender */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label
-                    htmlFor="age"
+                    htmlFor="dob"
                     className="block text-xs font-medium text-slate-600 mb-1"
                   >
-                    Age / आयु
+                    Date of Birth / जन्म तिथि
                   </label>
                   <div className="relative">
                     <Calendar
@@ -150,19 +226,17 @@ export default function PatientPortal() {
                       size={16}
                     />
                     <input
-                      type="number"
-                      id="age"
-                      name="age"
-                      value={formData.age}
+                      type="date"
+                      id="dob"
+                      name="dob"
+                      value={formData.dob}
                       onChange={handleChange}
-                      placeholder="Age / उम्र"
                       required
-                      min="0"
-                      max="120"
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all"
                     />
                   </div>
                 </div>
+
                 <div>
                   <label
                     htmlFor="gender"
