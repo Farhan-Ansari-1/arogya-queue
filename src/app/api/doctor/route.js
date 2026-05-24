@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Token from '@/models/Token';
 
+export const dynamic = 'force-dynamic';
+
 // 🩺 GET Route: Doctor ke liye saare pending patients ki list lana
 export async function GET(req) {
     try {
@@ -19,8 +21,14 @@ export async function GET(req) {
 
         return NextResponse.json({ success: true, data: activeTokens });
     } catch (error) {
-        console.error("Doctor API GET Error:", error);
-        return NextResponse.json({ success: false, error: "Database Fetch Failed" }, { status: 500 });
+        console.error("💥 Doctor GET Error:", error);
+        const isDBError = error.name === 'MongooseServerSelectionError' || error.name === 'MongoNetworkError';
+        
+        return NextResponse.json({ 
+            success: false, 
+            maintenance: isDBError, 
+            error: "Queue data is currently unavailable." 
+        }, { status: isDBError ? 503 : 500 });
     }
 }
 
@@ -42,7 +50,13 @@ export async function PUT(req) {
 
         return NextResponse.json({ success: true, message: "Status updated successfully" });
     } catch (error) {
-        console.error("Doctor API PUT Error:", error);
-        return NextResponse.json({ success: false, error: "Update Failed" }, { status: 500 });
+        console.error("💥 Doctor PUT Error:", error);
+        const isDBError = error.name === 'MongooseServerSelectionError' || error.name === 'MongoNetworkError';
+        
+        return NextResponse.json({ 
+            success: false, 
+            maintenance: isDBError, 
+            error: "Failed to update patient status." 
+        }, { status: isDBError ? 503 : 500 });
     }
 }

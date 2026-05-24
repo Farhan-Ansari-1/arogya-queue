@@ -8,6 +8,8 @@ import Department from '@/models/Department'; // Load dynamic departments
 import RateLimit from '@/models/RateLimit';
 import Patient from '@/models/Patient';
 
+export const dynamic = 'force-dynamic';
+
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const EMERGENCY_KEYWORDS = ["chest pain", "heart attack", "dil me dard", "saans nahi aa rahi", "heavy bleeding", "khoon beh raha hai", "accident", "unconscious", "behoshi"];
 
@@ -139,7 +141,9 @@ export async function POST(req) {
                     predictedDepartment = aiText;
                 }
             } catch (aiError) {
-                console.warn("⚠️ Gemini busy or limit reached. Falling back to default department.");
+                console.warn("⚠️ Gemini API Limit or Error. Falling back to General Medicine.");
+                // We don't trigger maintenance here because we have a fallback (General Medicine)
+                // to keep the hospital running even if AI is down.
             }
         }
 
@@ -205,7 +209,15 @@ export async function POST(req) {
         });
 
     } catch (error) {
-        console.error("Global Triage Architecture Failure:", error);
-        return NextResponse.json({ success: false, error: "Server Processing Error" }, { status: 500 });
+        console.error("💥 Triage API Error:", error);
+
+        // Check if it's a Database Connection Error
+        const isDBError = error.name === 'MongooseServerSelectionError' || error.name === 'MongoNetworkError';
+        
+        return NextResponse.json({ 
+            success: false, 
+            maintenance: isDBError, 
+            error: isDBError ? "Hospital servers are temporarily unreachable." : "Registration failed. Please try again." 
+        }, { status: isDBError ? 503 : 500 });
     }
 }

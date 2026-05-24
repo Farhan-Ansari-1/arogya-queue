@@ -65,7 +65,13 @@ export async function POST(req) {
         return response;
 
     } catch (error) {
-        console.error("Login API Error:", error);
-        return NextResponse.json({ success: false, error: "Login mein kuch gadbad ho gayi." }, { status: 500 });
+        console.error("💥 Login API Error:", error);
+        const isDBError = error.name === 'MongooseServerSelectionError' || error.name === 'MongoNetworkError';
+        
+        return NextResponse.json({ 
+            success: false, 
+            maintenance: isDBError, 
+            error: isDBError ? "Database is down. Maintenance mode." : "Login failed." 
+        }, { status: isDBError ? 503 : 500 });
     }
 }

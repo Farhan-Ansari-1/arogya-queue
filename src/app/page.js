@@ -33,6 +33,7 @@ export default function PatientPortal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null); // To store the token generation result
+  const [maintenance, setMaintenance] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const scrollToForm = () => {
@@ -90,6 +91,7 @@ export default function PatientPortal() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMaintenance(false);
     setResult(null); // Clear previous result
 
     try {
@@ -112,6 +114,9 @@ export default function PatientPortal() {
           mobile: "",
           symptoms: "",
         });
+      } else if (data.maintenance) {
+        setMaintenance(true);
+        setError(data.error);
       } else {
         setError(data.error || "Token generation failed.");
       }
@@ -132,6 +137,25 @@ export default function PatientPortal() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+      {/* 🛠️ Maintenance Overlay */}
+      {maintenance && (
+        <div className="fixed inset-0 'z-100' bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md text-center shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle size={40} />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">System Under Maintenance</h2>
+            <p className="text-slate-600 mb-6">{error || "The hospital server is temporarily unreachable. Our team is working on it."}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all"
+            >
+              Try Refreshing Page
+            </button>
+          </div>
+        </div>
+      )}
+
       <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} scrollToForm={scrollToForm} />
 
       {/* 🏔️ Hero Section */}
