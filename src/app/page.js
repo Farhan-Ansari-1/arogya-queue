@@ -261,13 +261,21 @@ export default function PatientPortal() {
             
             <div className="relative z-10">
         {result ? (
-          <PrintableSlip
-            result={result}
-            name={formData.name}
-            age={calculateAge(formData.dob)}
-            gender={formData.gender}
-            mobile={formData.mobile}
-          />
+          <div className="space-y-6">
+            <PrintableSlip
+              result={result}
+              name={result.name}
+              age={result.age}
+              gender={result.gender}
+              mobile={result.mobile}
+            />
+            <button 
+              onClick={() => setResult(null)}
+              className="w-full text-blue-600 font-bold text-sm hover:underline py-2"
+            >
+              ← Register New Patient / नया टोकन जनरेट करें
+            </button>
+          </div>
         ) : (
           <>
             <div className="text-center mb-6">

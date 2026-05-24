@@ -1,13 +1,12 @@
 # 🏥 ArogyaQueue — Smart OPD AI Triage System
 
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
-[![Framework](https://img.shields.io/badge/framework-Next.js-black)]()
-[![Database](https://img.shields.io/badge/database-MongoDB-green)]()
-[![AI](https://img.shields.io/badge/AI-Gemini%202.5-blueviolet)]()
-[![Hospital](https://img.shields.io/badge/deployment-I.G.M.%20Hospital-red)]()
+![ArogyaQueue Banner](https://img.shields.io/badge/ArogyaQueue-Smart_OPD_Triage-blue?style=for-the-badge&logo=hospital)
+![Status](https://img.shields.io/badge/Status-Production_Ready-success?style=flat-square)
+![Next.js](https://img.shields.io/badge/Framework-Next.js_15-black?style=flat-square&logo=next.js)
+![AI](https://img.shields.io/badge/AI-Gemini_2.5_Flash-blueviolet?style=flat-square&logo=google-gemini)
+![Database](https://img.shields.io/badge/Database-MongoDB_Atlas-green?style=flat-square&logo=mongodb)
 
 ---
-
 ## 🧠 Overview
 
 **ArogyaQueue** is a production-ready, AI-powered **OPD Queue & Smart Triage System** designed specifically for:
@@ -15,14 +14,12 @@
 > 🏥 **Indira Gandhi Memorial (I.G.M.) Hospital, Bhiwandi**  
 > *Building the bridge between technology and healthcare accessibility.*
 
-The platform modernizes traditional hospital OPD workflows by combining:
+ArogyaQueue modernizes hospital OPD workflows by eliminating physical queues through AI-driven intelligence. It handles everything from patient self-registration to real-time administrative analytics.
 
-* 📱 Digital self-ticketing
-* 🧠 AI-based patient triage
-* 👨‍⚕️ Doctor queue management
-* 🔐 Secure JWT-based Authentication & RBAC (Role Based Access Control)
-* 🏢 Reception desk operations
-* ⚙️ Real-time administrative control
+### 🔑 Key Pillars
+- **Efficiency:** Instant token generation via AI Triage.
+- **Security:** PII (Personally Identifiable Information) protection using SHA-256.
+- **Scalability:** Role-Based Access Control (RBAC) for Doctors, Receptionists, and Admins.
 
 Powered by **Gemini 2.5 Flash**, the system intelligently analyzes patient symptoms and routes them to the correct medical department fetched dynamically from the database.
 
@@ -30,38 +27,31 @@ Powered by **Gemini 2.5 Flash**, the system intelligently analyzes patient sympt
 
 # 🎬 System Demo
 
-> ⚠️ Replace these placeholders with real GIF recordings from `/assets`
 
 ## 📱 Patient Self-Ticketing
 
-![Patient Portal](assets/patient-demo.gif)
 
 ## 👨‍⚕️ Doctor Live Queue Dashboard
 
-![Doctor Portal](assets/doctor-demo.gif)
 
 ## 🏢 Reception Counter System
 
-![Reception Portal](assets/reception-demo.gif)
 
 ## ⚙️ Admin Control Panel
 
-![Admin Panel](assets/admin-demo.gif)
 
 ---
 
-# 🚀 Core Features & Modules
 
----
 
 ## 🚀 Core Modules & Features
 
 ### 📱 Patient Self-Ticketing Portal (`/`)
 *   **Smart Registration:** Features **Aadhaar-based lookup**. If a patient has visited before, their details (Name, DOB, Gender, Mobile) are automatically fetched via a secure lookup API.
 *   **Natural Language Triage:** Patients describe symptoms in plain English or Hindi.
-*   **AI Routing:** Dynamically routes patients to specialized departments using Gemini 1.5 Flash.
+*   **Intelligent Routing:** Dynamically routes patients to specialized departments using Gemini 2.5 Flash.
 *   **Emergency Guardrail:** Immediate detection of life-threatening symptoms (chest pain, heavy bleeding), bypassing the queue and alerting them to go to Casualty.
-*   **Rate Limiting:** Protects the system from spam using IP and Mobile-based limits.
+*   **Rate Limiting:** Protects the system from spam using IP-based (5/hr) and Mobile-based (10/hr) limits.
 
 ### 🏢 Reception Counter Desk (`/reception`)
 *   **High-Speed Entry:** Optimized for staff to handle walk-ins. Includes the same Aadhaar lookup feature as the patient portal.
@@ -96,12 +86,17 @@ Powered by **Gemini 2.5 Flash**, the system intelligently analyzes patient sympt
     *   **Admin:** Full access to everything.
     *   **Doctor:** Access to their specific queue.
     *   **Receptionist:** Access to registration and slip generation.
-*   **Aadhaar Privacy:** Aadhaar numbers are hashed using **SHA-256** before being stored, ensuring PII (Personally Identifiable Information) security.
+*   **PII Security:** Aadhaar numbers are never stored in plain text. They are hashed using **SHA-256**, ensuring that even database leaks do not compromise patient identity.
 
 ---
 
 ### 🧠 AI Triage Engine
-The system utilizes **Gemini 1.5 Flash** with custom system instructions:
+The heart of ArogyaQueue is its Triage Logic. It uses a **Hybrid Context Injection** model:
+1. **Dynamic Context:** The system fetches the *current* list of active hospital departments from MongoDB.
+2. **Prompt Engineering:** Gemini 2.5 Flash is instructed to prioritize "General Medicine" for common symptoms (fever, cold) and only route to specialists (Cardiology, Ortho) for organ-specific complaints.
+3. **Multilingual Support:** Handles Hinglish inputs like *"Mujhe 3 din se bukhar hai"* with high accuracy.
+
+**Triage Workflow:**
 1.  Fetches active departments directly from MongoDB.
 2.  Matches patient's symptoms against the live department list.
 3.  Returns a mapping to the most relevant medical category.
@@ -110,6 +105,10 @@ The system utilizes **Gemini 1.5 Flash** with custom system instructions:
 ---
 
 ## 🛠️ Tech Stack
+### Backend Architecture
+- **Sequential Token Generation:** Implements an atomic increment logic to ensure no two patients get the same token number, even during high concurrency.
+- **Date-Locked Queues:** Tokens are automatically reset every midnight, maintaining a daily sequential order (e.g., MED-1, MED-2).
+<br>
 
 | Layer | Technology |
 | :--- | :--- |
@@ -119,8 +118,9 @@ The system utilizes **Gemini 1.5 Flash** with custom system instructions:
 | **Charts** | Chart.js |
 | **Backend** | Next.js API Routes (Edge Compatible) |
 | **Database** | MongoDB Atlas (Mongoose) |
-| **AI Engine** | Google Gemini 1.5 Flash |
+| **AI Engine** | Google Gemini 2.5 Flash |
 | **Auth** | JWT (jose) |
+| **Icons** | Lucide React |
 
 ---
 
@@ -178,36 +178,28 @@ http://localhost:3000
 # 📂 Project Structure
 
 ```bash
-ArogyaQueue/
-│
-├── app/
-│   ├── page.tsx                # Patient Portal
-│   ├── reception/              # Reception Desk
-│   ├── doctor/                 # Doctor Dashboard
-│   ├── admin/                  # Admin Control Room
-│   └── api/
-│       └── triage/route.ts     # AI Triage Engine
-│
-├── components/                 # Shared UI
-├── lib/                        # DB + AI utilities
-├── models/                     # Mongoose schemas
-├── assets/                     # GIF demos
-├── .env.local
-├── package.json
-└── README.md
+arogya-queue/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── admin/          # Admin operations (CRUD Staff/Depts)
+│   │   │   ├── auth/login/     # JWT Authentication
+│   │   │   ├── doctor/         # Queue management for doctors
+│   │   │   └── triage/         # Gemini AI Triage Engine
+│   │   ├── doctor/             # Doctor's Dashboard UI
+│   │   ├── layout.js           # Global Layout & Fonts
+│   │   └── page.js             # Patient Portal (Registration)
+│   ├── components/             # Reusable UI (Navbar, Slip, Footer)
+│   ├── lib/                    # Shared utilities (MongoDB config)
+│   ├── models/                 # Mongoose Schemas (Token, Staff, etc.)
+│   └── route.js                # Receptionist API (Token overrides)
+├── public/                     # Static assets (Images, Logos)
+├── .env.local                  # Environment variables (Private)
+├── jsconfig.json               # Path aliases (@/*)
+├── next.config.mjs             # Next.js configuration
+├── package.json                # Project dependencies
+└── README.md                   # Documentation
 ```
-
----
-
-# 🔮 Roadmap
-
-* [ ] Secure authentication (NextAuth / JWT)
-* [ ] Live token display TVs
-* [ ] SMS / WhatsApp notifications
-* [ ] Voice-assisted registration
-* [ ] Multi-language support
-* [ ] Doctor analytics dashboard
-* [ ] Offline hospital fallback mode
 
 ---
 

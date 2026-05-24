@@ -113,14 +113,23 @@ export async function POST(req) {
         const deptCodesMap = {};
         dbDepartments.forEach(d => { deptCodesMap[d.name] = d.code; });
 
-        // Default route setup agar koi list na mile
-        let predictedDepartment = departmentNames[0] || "General Medicine";
+        // Smart Fallback: Pehle "General Medicine" dhundo list mein, nahi toh pehla wala
+        let fallbackDept = departmentNames.find(d => d.toLowerCase().includes("general")) || departmentNames[0] || "General Medicine";
+        let predictedDepartment = fallbackDept;
 
         if (departmentNames.length > 0) {
             try {
-                // Gemini ko live system instructions dena aaj ki current department list ke sath
-                const systemInstruction = `You are a medical triage system. Analyze symptoms and reply with EXACTLY ONE department name from this list: ${departmentNames.join(', ')}. 
-                Do not write full sentences, punctuation, or reasoning. If symptoms don't perfectly match specialized departments, default strictly to '${predictedDepartment}'.`;
+                // Improved Medical Triage Logic
+                const systemInstruction = `You are a senior medical triage officer at I.G.M. Hospital.
+                Your job is to route patients to the correct department based on symptoms provided in English, Hindi, or Hinglish.
+
+                AVAILABLE DEPARTMENTS: ${departmentNames.join(', ')}
+
+                STRICT RULES:
+                1. If symptoms are general like fever (bukhar), cold (sardi/khansi), body pain, or weakness, ALWAYS route to 'General Medicine'.
+                2. Only route to specialized departments (like Cardiology, Orthopedics, etc.) if the symptoms specifically target those organs (e.g., chest pain, bone fracture).
+                3. Respond ONLY with the exact department name from the list above. No punctuation, no extra words.
+                4. If symptoms are unclear, default strictly to '${fallbackDept}'.`;
 
                 const model = ai.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction });
                 const result = await model.generateContent(`Patient Symptoms: "${symptoms}"`);
@@ -182,10 +191,17 @@ export async function POST(req) {
         await newToken.save();
 
         return NextResponse.json({ 
-            success: true, is_emergency: false,
+            success: true, 
+            is_emergency: false,
             assigned_department: predictedDepartment,
-            token_number: nextTokenNumber, unique_token_id: uniqueTokenId,
-            doctor_name: doctorName, room_number: roomNumber
+            token_number: nextTokenNumber, 
+            unique_token_id: uniqueTokenId,
+            doctor_name: doctorName, 
+            room_number: roomNumber,
+            name: name,
+            age: calculatedAge,
+            gender: gender,
+            mobile: mobile
         });
 
     } catch (error) {

@@ -94,7 +94,7 @@ export default function AdminDashboard() {
 
 
   useEffect(() => {
-    fetchAdminData();
+    Promise.resolve().then(() => fetchAdminData());
   }, [fetchAdminData]);
 
   // 📊 Chart Data Generator
@@ -615,7 +615,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-sans font-semibold border ${staff.role === 'Doctor' ? 'bg-blue-950 text-blue-400 border-blue-800' : 'bg-purple-950 text-purple-400 border-purple-800'}`}>
-                      {staff.role}
+                      {staff.role === 'Doctor' ? `${staff.department} (Room: ${staff.roomNumber})` : staff.role}
                     </span>
                     {staff.role === 'Doctor' && (
                       <button onClick={() => toggleAvailability(staff)} className="flex items-center gap-1 text-xs">
